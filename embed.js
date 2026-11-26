@@ -90,7 +90,13 @@ export function composeEmbed(form, guild, channel, member, mentionEveryone) {
   }
 
   const row = buttons.length ? [{ type: 1, components: buttons }] : [];
-  const allowedMentions = { parse: [], roles };
+  const users = form.get('ping_members') === 'on'
+    ? [...new Set([description, ...fields.map(field => field.value)].flatMap(value =>
+        [...value.matchAll(/<@!?(\d{17,20})>/g)].map(match => match[1])))].slice(0, 100)
+    : [];
+  const allowedMentions = { parse: [], roles, users };
+  const notifications = [...roles.map(id => '<@&' + id + '>'), ...users.map(id => '<@' + id + '>')];
+  if (format === 'classic' && notifications.join(' ').length > 2000) return null;
   const accent = Number.parseInt(color.slice(1), 16);
   if (format === 'v2') {
     const components = [];
@@ -128,7 +134,7 @@ export function composeEmbed(form, guild, channel, member, mentionEveryone) {
       ...(thumbnail ? { thumbnail: { url: thumbnail } } : {}),
       ...(fields.length ? { fields } : {})
     }],
-    ...(roles.length ? { content: '<@&' + roles[0] + '>' } : {}),
+    ...(notifications.length ? { content: notifications.join(' ') } : {}),
     ...(row.length ? { components: row } : {}),
     allowedMentions
   };

@@ -23,4 +23,4 @@ Sem token, o processo inicia só o painel. Para hospedagem com acesso externo, u
 | `/resultado` | Registra adversário, mapa e placar. |
 | `/gg` | Envia um cumprimento para o fim da partida. |
 
-O painel consulta os mesmos dados do bot. As ações que alteram dados são feitas no Discord. O banco SQLite fica em `DATA_DIR`.
+O painel consulta os mesmos dados do bot. A staff também pode executar os comandos e enviar embeds pelo painel, digitando o ID de um canal onde ela e o bot possam postar. O banco SQLite fica em `DATA_DIR`.

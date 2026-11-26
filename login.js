@@ -32,8 +32,8 @@ function send(response, status, title, message, link) {
   response.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8' });
   response.end(`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ember Veil · ${title}</title><style>
-*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#111013;color:#faf4f2;font:16px system-ui,sans-serif}
-main{width:min(100%,480px);padding:36px;border:1px solid #3a2b31;border-radius:16px;background:#1b161b}strong{color:#ff795f;letter-spacing:.12em}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 60% 0%,#3b201e,transparent 62%),#111013;color:#faf4f2;font:16px system-ui,sans-serif}
+main{width:min(100%,510px);padding:clamp(26px,6vw,54px);border:1px solid #493034;border-top:3px solid #ff795f;border-radius:4px;background:#191518;box-shadow:0 24px 80px #0008}strong{color:#ff795f;letter-spacing:.12em}
 h1{font-size:clamp(1.8rem,6vw,2.6rem);line-height:1.03}p{color:#c3b5b5}a{display:inline-block;margin-top:12px;padding:12px 20px;border-radius:8px;background:#ff795f;color:#171016;font-weight:700;text-decoration:none}
 </style><main><strong>EMBER VEIL</strong><h1>${title}</h1><p>${message}</p>${link || ''}</main></html>`);
 }
@@ -53,6 +53,13 @@ export function discordLogin(env, requestDiscord = fetch) {
   return async (request, response) => {
     const url = new URL(request.url, origin);
     const path = url.pathname;
+    if (path === '/staff' && request.method === 'POST') {
+      const cookies = Object.fromEntries((request.headers.cookie || '').split(';').map(part => part.trim().split('=')));
+      const userId = secret && verify(cookies.ember_session, 'session', secret);
+      if (userId && request.headers.origin === origin.origin) return userId;
+      response.writeHead(403).end('Acesso negado.');
+      return false;
+    }
     if (request.method !== 'GET' || !['/', '/auth/discord', '/auth/discord/callback', '/sair'].includes(path)) {
       response.writeHead(404).end();
       return false;
@@ -64,7 +71,8 @@ export function discordLogin(env, requestDiscord = fetch) {
 
     const cookies = Object.fromEntries((request.headers.cookie || '').split(';').map(part => part.trim().split('=')));
     if (path === '/') {
-      if (verify(cookies.ember_session, 'session', secret)) return true;
+      const userId = verify(cookies.ember_session, 'session', secret);
+      if (userId) return userId;
       send(response, 200, 'Painel do time', 'Entre com a conta do Discord que você usa no servidor da Ember Veil.', retry);
       return false;
     }

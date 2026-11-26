@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { dashboard } from './dashboard.js';
+import { staffAction, getStaff } from './staff.js';
 
 const env = process.env;
 const directory = env.DATA_DIR || './data';
@@ -34,13 +35,21 @@ const attendance = db.prepare('SELECT name, answer FROM attendance WHERE trainin
 const scores = db.prepare('SELECT * FROM scores ORDER BY date DESC LIMIT 30');
 
 const login = discordLogin(env);
+let discordStaff;
 createServer(async (request, response) => {
   response.setHeader('Cache-Control', 'no-store');
   try {
-    if (!await login(request, response)) return;
+    const userId = await login(request, response);
+    if (!userId) return;
+    if (request.method === 'POST') {
+      await staffAction(request, response, discordStaff, userId);
+      return;
+    }
+    const staff = await getStaff(discordStaff, userId).catch(() => null);
+    const noticeCode = new URL(request.url, 'http://localhost').searchParams.get('status');
     const upcoming = trainings.all(Date.now()).map(row => ({ ...row, people: attendance.all(row.id) }));
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    response.end(dashboard(upcoming, roster.all(), scores.all()));
+    response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode));
   } catch {
     response.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end('Falha na conexão com o Discord. Tente novamente.');
@@ -77,9 +86,12 @@ if (env.DISCORD_TOKEN) {
     { name: 'gg', description: 'Cumprimentar o adversário' }
   ];
 
-  const reply = (i, content, privateReply = true) => i.reply({
-    content, allowedMentions: { parse: [] }, ...(privateReply ? { flags: MessageFlags.Ephemeral } : {})
-  });
+  const reply = (i, content, privateReply = true, status = 'ok') => {
+    i.setOutcome?.(status);
+    return i.reply({
+      content, allowedMentions: { parse: [] }, ...(privateReply ? { flags: MessageFlags.Ephemeral } : {})
+    });
+  };
 
   client.once(Events.ClientReady, async ready => {
     try {
@@ -128,7 +140,7 @@ if (env.DISCORD_TOKEN) {
       const date = Date.parse(dateText);
       if (!title || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(dateText) ||
           !Number.isFinite(date) || date <= Date.now()) {
-        return reply(i, 'Informe um título e uma data futura com fuso. Exemplo: 2027-01-10T20:00-04:00.');
+        return reply(i, 'Informe um título e uma data futura com fuso. Exemplo: 2027-01-10T20:00-04:00.', true, 'invalid');
       }
 
       const id = randomUUID();
@@ -154,7 +166,7 @@ if (env.DISCORD_TOKEN) {
 
     if (i.commandName === 'elenco') {
       const player = i.options.getUser('jogador', true);
-      if (player.bot) return reply(i, 'Escolha um jogador do servidor.');
+      if (player.bot) return reply(i, 'Escolha um jogador do servidor.', true, 'invalid');
       if (i.options.getSubcommand() === 'remover') {
         const change = db.prepare('DELETE FROM roster WHERE player = ?').run(player.id);
         return reply(i, change.changes ? 'Jogador removido.' : 'Esse jogador já está fora do elenco.');
@@ -162,7 +174,7 @@ if (env.DISCORD_TOKEN) {
 
       const slot = option('vaga');
       const count = db.prepare('SELECT count(*) AS total FROM roster WHERE slot = ? AND player != ?').get(slot, player.id).total;
-      if (slot === 'Titular' && count >= 5) return reply(i, 'As cinco vagas de titular estão preenchidas.');
+      if (slot === 'Titular' && count >= 5) return reply(i, 'As cinco vagas de titular estão preenchidas.', true, 'full');
       db.prepare(`INSERT INTO roster VALUES (?, ?, ?, ?) ON CONFLICT(player)
         DO UPDATE SET name = excluded.name, role = excluded.role, slot = excluded.slot`)
         .run(player.id, player.displayName, option('funcao'), slot);
@@ -181,6 +193,14 @@ if (env.DISCORD_TOKEN) {
     }
   }
 
+  discordStaff = {
+    client, guildId: env.DISCORD_GUILD_ID, roleId: env.STAFF_ROLE_ID,
+    manageGuild: PermissionFlagsBits.ManageGuild,
+    viewChannel: PermissionFlagsBits.ViewChannel,
+    sendMessages: PermissionFlagsBits.SendMessages,
+    embedLinks: PermissionFlagsBits.EmbedLinks,
+    commands, handle
+  };
   client.on(Events.InteractionCreate, async interaction => {
     try {
       await handle(interaction);

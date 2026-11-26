@@ -1,0 +1,16 @@
+{
+  "name": "emberveil",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env app.js",
+    "check": "node --check app.js && node --check dashboard.js"
+  },
+  "dependencies": {
+    "discord.js": "14.26.2"
+  }
+}

@@ -1,3 +1,4 @@
+import { resultAnnouncements } from './result-announcements.js';
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { discordLogin } from './login.js';
@@ -42,16 +43,19 @@ const drafts = embedDrafts(db);
 const login = discordLogin(env);
 const lineupBanner = readFileSync(new URL('./assets/lineup-banner.png', import.meta.url));
 const bannerPath = '/assets/lineup-banner.png';
+const resultsBannerPath = '/assets/results-banner.png';
+const resultsBanner = readFileSync(new URL('./assets/results-banner.png', import.meta.url));
 const bannerUrl = env.PUBLIC_URL && new URL(bannerPath, env.PUBLIC_URL).href;
 let discordStaff;
 createServer(async (request, response) => {
-  if (request.url === bannerPath && ['GET', 'HEAD'].includes(request.method)) {
+  const banner = request.url === bannerPath ? lineupBanner : request.url === resultsBannerPath ? resultsBanner : null;
+  if (banner && ['GET', 'HEAD'].includes(request.method)) {
     response.writeHead(200, {
       'Content-Type': 'image/png',
-      'Content-Length': lineupBanner.length,
+      'Content-Length': banner.length,
       'Cache-Control': 'public, max-age=86400'
     });
-    response.end(request.method === 'HEAD' ? undefined : lineupBanner);
+    response.end(request.method === 'HEAD' ? undefined : banner);
     return;
   }
   response.setHeader('Cache-Control', 'no-store');
@@ -117,7 +121,10 @@ if (env.DISCORD_TOKEN) {
     });
   };
 
+  const announceResults = resultAnnouncements(db, client, Routes.channelMessages,
+    env.DISCORD_GUILD_ID, env.RESULTS_CHANNEL_ID || '1575361261993201757', env.PUBLIC_URL && new URL(resultsBannerPath, env.PUBLIC_URL).href);
   client.once(Events.ClientReady, async ready => {
+    void announceResults();
     try {
       const guild = await ready.guilds.fetch(env.DISCORD_GUILD_ID);
       await guild.commands.set(commands);
@@ -212,7 +219,8 @@ if (env.DISCORD_TOKEN) {
       const theirs = i.options.getInteger('rival', true);
       db.prepare('INSERT OR IGNORE INTO scores VALUES (?, ?, ?, ?, ?, ?)')
         .run(i.id, opponent, map, ours, theirs, Date.now());
-      return reply(i, `**${map}** · Ember Veil ${ours} × ${theirs} ${opponent}`, false);
+      void announceResults();
+      return reply(i, 'Resultado registrado.');
     }
   }
 
@@ -230,7 +238,7 @@ if (env.DISCORD_TOKEN) {
         body: { ...payload, allowed_mentions: allowedMentions }
       });
     },
-    premier, drafts, commands, handle
+    premier, drafts, commands, handle, announceResults
   };
   client.on(Events.InteractionCreate, async interaction => {
     try {

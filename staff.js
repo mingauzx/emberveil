@@ -43,7 +43,9 @@ export async function staffAction(request, response, context, userId) {
     return redirect(result.status, result.id);
   }
   if (action === 'premier/approve' || action === 'premier/reject') {
-    return redirect(context.premier.decide(action, form.get('match'), form.get('opponent')?.trim(), form.get('map')?.trim()));
+    const outcome = context.premier.decide(action, form.get('match'), form.get('opponent')?.trim(), form.get('map')?.trim());
+    if (outcome === 'premier-approved') void context.announceResults();
+    return redirect(outcome);
   }
   const [name, sub] = (action || '').split('/');
   const command = context.commands.find(command => command.name === name);
@@ -53,7 +55,7 @@ export async function staffAction(request, response, context, userId) {
   }
 
   let channel;
-  if (name !== 'elenco') {
+  if (name !== 'elenco' && name !== 'resultado') {
     const channelId = form.get('channel')?.trim() || '';
     channel = snowflake.test(channelId) ? await guild.channels.fetch(channelId).catch(() => null) : null;
     const permissions = [context.viewChannel, context.sendMessages];

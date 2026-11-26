@@ -36,7 +36,7 @@ function webCommand(command, subcommand) {
     return '<label>' + label + input + '</label>';
   }).join('');
   return '<details><summary>' + label + '</summary><form method="post" action="/staff"><input type="hidden" name="action" value="' + action + '">' +
-    fields + (command.name === 'elenco' ? '' : channelField) + '<button>Executar comando</button></form></details>';
+    fields + (['elenco', 'resultado'].includes(command.name) ? '' : channelField) + '<button>Executar comando</button></form></details>';
 }
 
 export function dashboard(trainings, roster, matches, commands = [], noticeCode, choices = null, signedIn = false, premier = null, drafts = null) {

@@ -64,18 +64,16 @@ export function discordLogin(env, requestDiscord = fetch) {
       response.writeHead(404).end();
       return false;
     }
+    if (path === '/') {
+      const session = (request.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith('ember_session='));
+      return secret && verify(session?.slice('ember_session='.length), 'session', secret) || 'public';
+    }
     if (!clientId || !secret || !guildId) {
       send(response, 503, 'Painel em configuração', 'O acesso com Discord estará disponível em breve.');
       return false;
     }
 
     const cookies = Object.fromEntries((request.headers.cookie || '').split(';').map(part => part.trim().split('=')));
-    if (path === '/') {
-      const userId = verify(cookies.ember_session, 'session', secret);
-      if (userId) return userId;
-      send(response, 200, 'Painel do time', 'Entre com a conta do Discord que você usa no servidor da Ember Veil.', retry);
-      return false;
-    }
     if (path === '/sair') {
       redirect(response, '/', [cookie('ember_session', '', 0)]);
       return false;

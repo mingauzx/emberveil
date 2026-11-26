@@ -1,3 +1,5 @@
+import { composeEmbed } from './embed.js';
+
 const snowflake = /^\d{17,20}$/;
 
 export async function getStaff(context, userId) {
@@ -18,7 +20,7 @@ async function formData(request) {
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 32000) return null;
+    if (size > 45000) return null;
     chunks.push(chunk);
   }
   return new URLSearchParams(Buffer.concat(chunks).toString());
@@ -44,7 +46,7 @@ export async function staffAction(request, response, context, userId) {
     const channelId = form.get('channel')?.trim() || '';
     channel = snowflake.test(channelId) ? await guild.channels.fetch(channelId).catch(() => null) : null;
     const permissions = [context.viewChannel, context.sendMessages];
-    if (name === 'embed' || name === 'treino') permissions.push(context.embedLinks);
+    if ((name === 'embed' && form.get('format') !== 'v2') || name === 'treino') permissions.push(context.embedLinks);
     if (!channel?.isSendable() || channel.isThread() ||
         !channel.permissionsFor(member)?.has(permissions.slice(0, 2)) ||
         !channel.permissionsFor(guild.members.me)?.has(permissions)) {
@@ -54,16 +56,9 @@ export async function staffAction(request, response, context, userId) {
 
   try {
     if (name === 'embed') {
-      const title = form.get('title')?.trim() || '';
-      const description = form.get('description')?.trim() || '';
-      const color = form.get('color') || '';
-      if ((!title && !description) || title.length > 256 || description.length > 4096 || !/^#[0-9a-f]{6}$/i.test(color)) {
-        return redirect('invalid');
-      }
-      await channel.send({
-        embeds: [{ ...(title ? { title } : {}), ...(description ? { description } : {}), color: Number.parseInt(color.slice(1), 16) }],
-        allowedMentions: { parse: [] }
-      });
+      const message = composeEmbed(form, guild, channel, member, context.mentionEveryone);
+      if (!message) return redirect('invalid');
+      await channel.send(message);
       return redirect('ok');
     }
 

@@ -45,11 +45,16 @@ createServer(async (request, response) => {
       await staffAction(request, response, discordStaff, userId);
       return;
     }
-    const staff = await getStaff(discordStaff, userId).catch(() => null);
+    const signedIn = userId !== 'public';
+    const staff = signedIn ? await getStaff(discordStaff, userId).catch(() => null) : null;
+    const choices = staff ? {
+      roles: [...staff.guild.roles.cache.values()].filter(role => role.id !== staff.guild.id),
+      emojis: [...staff.guild.emojis.cache.values()].filter(emoji => emoji.available !== false)
+    } : null;
     const noticeCode = new URL(request.url, 'http://localhost').searchParams.get('status');
     const upcoming = trainings.all(Date.now()).map(row => ({ ...row, people: attendance.all(row.id) }));
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode));
+    response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode, choices, signedIn));
   } catch {
     response.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end('Falha na conexão com o Discord. Tente novamente.');
@@ -199,6 +204,7 @@ if (env.DISCORD_TOKEN) {
     viewChannel: PermissionFlagsBits.ViewChannel,
     sendMessages: PermissionFlagsBits.SendMessages,
     embedLinks: PermissionFlagsBits.EmbedLinks,
+    mentionEveryone: PermissionFlagsBits.MentionEveryone,
     commands, handle
   };
   client.on(Events.InteractionCreate, async interaction => {

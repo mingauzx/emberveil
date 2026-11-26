@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
-import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { discordLogin } from './login.js';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -32,33 +33,23 @@ const trainings = db.prepare('SELECT * FROM training WHERE message IS NOT NULL A
 const attendance = db.prepare('SELECT name, answer FROM attendance WHERE training = ? ORDER BY name');
 const scores = db.prepare('SELECT * FROM scores ORDER BY date DESC LIMIT 30');
 
-const password = env.DASHBOARD_PASSWORD;
-const digest = value => createHash('sha256').update(value).digest();
-if (password) {
-  const expected = digest('ember:' + password);
-  createServer((request, response) => {
-    response.setHeader('Cache-Control', 'no-store');
-    const header = request.headers.authorization || '';
-    const authorized = header.startsWith('Basic ') &&
-      timingSafeEqual(expected, digest(Buffer.from(header.slice(6), 'base64')));
-    if (!authorized) {
-      response.writeHead(401, { 'WWW-Authenticate': 'Basic realm="Ember Veil", charset="UTF-8"' });
-      return response.end('Acesso restrito');
-    }
-    if (request.url !== '/') {
-      response.writeHead(404);
-      return response.end();
-    }
+const login = discordLogin(env);
+createServer(async (request, response) => {
+  response.setHeader('Cache-Control', 'no-store');
+  try {
+    if (!await login(request, response)) return;
     const upcoming = trainings.all(Date.now()).map(row => ({ ...row, people: attendance.all(row.id) }));
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     response.end(dashboard(upcoming, roster.all(), scores.all()));
-  }).listen(Number(env.PORT || 3000), env.HOST || '127.0.0.1', () => console.log('Dashboard iniciado.'));
-}
+  } catch {
+    response.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
+    response.end('Falha na conexão com o Discord. Tente novamente.');
+  }
+}).listen(Number(env.PORT || 3000), env.HOST || '127.0.0.1', () => console.log('Dashboard iniciado.'));
 
-if (Boolean(env.DISCORD_TOKEN) !== Boolean(env.DISCORD_GUILD_ID)) {
+if (env.DISCORD_TOKEN && !env.DISCORD_GUILD_ID) {
   throw new Error('Configure DISCORD_TOKEN e DISCORD_GUILD_ID juntos.');
 }
-if (!password && !env.DISCORD_TOKEN) throw new Error('Configure o painel ou o bot no arquivo .env.');
 
 if (env.DISCORD_TOKEN) {
   const { Client, Events, GatewayIntentBits, PermissionFlagsBits, MessageFlags } = await import('discord.js');

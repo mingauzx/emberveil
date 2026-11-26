@@ -42,7 +42,7 @@ ul{margin:0;padding:0;list-style:none}li{display:flex;justify-content:space-betw
 @media(max-width:700px){.grid{grid-template-columns:1fr;gap:0}.attendance{grid-template-columns:1fr}.hero{padding-top:38px}}
 </style>
 </head>
-<body><header><nav aria-label="Painel"><strong>EMBER VEIL</strong><a href="#treinos">Treinos</a><a href="#elenco">Elenco</a><a href="#historico">Histórico</a></nav></header>
+<body><header><nav aria-label="Painel"><strong>EMBER VEIL</strong><a href="#treinos">Treinos</a><a href="#elenco">Elenco</a><a href="#historico">Histórico</a><a href="/sair">Sair</a></nav></header>
 <main><div class="hero"><h1>Painel do time</h1><p>Agenda, escalação e partidas da Ember Veil.</p></div>
 <div class="grid"><section id="treinos"><h2>Próximos treinos</h2>${visits || empty('Nenhum treino agendado. Use /treino marcar no Discord.')}</section>
 <section id="elenco"><h2>Escalação</h2>${players ? '<ul>' + players + '</ul>' : empty('Nenhum jogador cadastrado. Use /elenco definir no Discord.')}</section></div>

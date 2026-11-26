@@ -8,9 +8,10 @@ Bot de Discord e painel para organizar treinos, elenco e resultados do time de V
 2. Copie `.env.example` para `.env`.
 3. No [Discord Developer Portal](https://discord.com/developers/applications), crie uma aplicação e um bot. Instale no servidor com os escopos `bot` e `applications.commands` e permissões de ver canais e enviar mensagens.
 4. Preencha `DISCORD_TOKEN` e `DISCORD_GUILD_ID`. Opcionalmente, configure `STAFF_ROLE_ID` com o cargo de capitão. Membros com Gerenciar Servidor também podem editar.
-5. Configure `DASHBOARD_PASSWORD` e rode `npm start`. Abra http://127.0.0.1:3000 e entre como `ember`.
+5. Em **OAuth2** no Discord Developer Portal, registre a URL de retorno `http://127.0.0.1:3000/auth/discord/callback` para rodar localmente. Em produção, use o domínio HTTPS do painel com esse mesmo caminho.
+6. Configure `DISCORD_CLIENT_ID` com o Application ID, `DISCORD_CLIENT_SECRET` com o Client Secret do OAuth2 e `PUBLIC_URL` com a URL do painel. Rode `npm start`. O login aceita membros do servidor configurado em `DISCORD_GUILD_ID`.
 
-Sem token e sem ID do servidor, o processo inicia só o painel. Para hospedagem com acesso externo, use HTTPS, configure `HOST=0.0.0.0` e monte um volume persistente no caminho de `DATA_DIR`. Rode uma instância do serviço.
+Sem token, o processo inicia só o painel. Para hospedagem com acesso externo, use HTTPS, configure `HOST=0.0.0.0` e monte um volume persistente no caminho de `DATA_DIR`. Rode uma instância do serviço.
 
 ## Comandos
 

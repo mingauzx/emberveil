@@ -29,18 +29,20 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
       }
       description += line;
     }
-    const embed = {
-      title: 'Resultados gerais \u00b7 Ember Veil', description, color: 0xf45c40,
-      ...(bannerUrl ? { image: { url: bannerUrl } } : {})
-    };
-    const digest = createHash('sha256').update(JSON.stringify(embed)).digest('hex');
+    const blocks = [];
+    if (bannerUrl) blocks.push({ type: 12, items: [{ media: { url: bannerUrl }, description: 'Resultados Premier' }] });
+    blocks.push({ type: 10, content: '# Resultados gerais da Ember Veil' });
+    blocks.push({ type: 14, divider: true, spacing: 1 });
+    blocks.push({ type: 10, content: description });
+    const components = [{ type: 17, accent_color: 0xf45c40, components: blocks }];
+    const digest = createHash('sha256').update(JSON.stringify(components)).digest('hex');
     const previous = stored.get();
     if (previous?.digest === digest) return;
-    const body = { embeds: [embed], allowed_mentions: { parse: [] } };
+    const body = { flags: 32768, components, allowed_mentions: { parse: [] } };
     let message;
     if (previous) {
       try {
-        message = await client.rest.patch(route(channel.id) + '/' + previous.message_id, { body });
+        message = await client.rest.patch(route(channel.id) + '/' + previous.message_id, { body: { ...body, embeds: [] } });
       } catch (error) {
         if (error.code !== 10008) throw error;
       }

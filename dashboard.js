@@ -10,7 +10,8 @@ const empty = message => '<p class="empty">' + message + '</p>';
 
 const channelField = '<label> ID do canal <input name="channel" required inputmode="numeric" pattern="[0-9]{17,20}" placeholder="Cole o ID do canal"></label>';
 const statuses = new Map([
-  ['ok', 'Ação concluída.'], ['sent-v2', 'Mensagem Components V2 enviada.'], ['sent-classic', 'Embed clássico enviado.'], ['invalid', 'Revise os campos e tente novamente.'],
+  ['ok', 'Ação concluída.'], ['premier-approved', 'Resultado Premier publicado.'],
+  ['premier-rejected', 'Partida descartada.'], ['premier-reviewed', 'Essa partida já foi revisada.'], ['sent-v2', 'Mensagem Components V2 enviada.'], ['sent-classic', 'Embed clássico enviado.'], ['invalid', 'Revise os campos e tente novamente.'],
   ['channel', 'Escolha um canal onde você e o bot possam enviar mensagens. Para embeds, dê ao bot a permissão de inserir links.'],
   ['full', 'As cinco vagas de titular estão preenchidas.'], ['failed', 'O Discord não concluiu a ação. Confira o canal antes de tentar novamente.']
 ]);
@@ -36,7 +37,7 @@ function webCommand(command, subcommand) {
     fields + (command.name === 'elenco' ? '' : channelField) + '<button>Executar comando</button></form></details>';
 }
 
-export function dashboard(trainings, roster, matches, commands = [], noticeCode, choices = null, signedIn = false) {
+export function dashboard(trainings, roster, matches, commands = [], noticeCode, choices = null, signedIn = false, premier = null) {
   const tools = commands.flatMap(command => {
     const subcommands = command.options?.filter(option => option.type === 1) || [];
     return subcommands.length ? subcommands.map(sub => webCommand(command, sub)) : [webCommand(command)];
@@ -66,7 +67,7 @@ export function dashboard(trainings, roster, matches, commands = [], noticeCode,
     escape(player.slot) + '</span></li>').join('');
   const results = matches.map(match => {
     const status = match.ours > match.theirs ? 'Vitória' : match.ours < match.theirs ? 'Derrota' : 'Empate';
-    return '<tr><td>' + escape(match.opponent) + '</td><td>' + escape(match.map) +
+    return '<tr><td>' + escape(match.opponent) + (match.id?.startsWith('premier:') ? '<small>Premier</small>' : '') + '</td><td>' + escape(match.map) +
       '</td><td><strong>' + match.ours + ' × ' + match.theirs + '</strong></td><td>' +
       status + '</td><td>' + time.format(match.date) + '</td></tr>';
   }).join('');
@@ -74,6 +75,22 @@ export function dashboard(trainings, roster, matches, commands = [], noticeCode,
     '<div class="editor-group"><label>Título da seção ' + index + '<input name="field_title_' + index + '" maxlength="100"></label>' +
     '<label>Texto da seção ' + index + '<textarea name="field_body_' + index + '" maxlength="1024" rows="3"></textarea></label></div>'
   ).join('');
+  const syncStatus = {
+    disabled: 'Aguardando credenciais oficiais da Riot e uma conta autorizada.',
+    waiting: 'Consultando o histórico Premier.',
+    ready: 'Importação Premier ativa.',
+    error: 'A Riot não respondeu à última consulta. O bot vai tentar novamente automaticamente.'
+  };
+  const premierPanel = premier ? '<div class="command-list"><h3>Resultados Premier para revisar</h3><p>' +
+    syncStatus[premier.state] + '</p>' + (premier.pending.map(match =>
+      '<article><h3>' + escape(match.map) + ' · ' + escape(match.ours) + ' × ' + escape(match.theirs) +
+      '</h3><p>' + time.format(match.date) + '</p><form method="post" action="/staff">' +
+      '<input type="hidden" name="match" value="' + escape(match.id) + '">' +
+      '<div class="editor-row"><label>Adversário<input name="opponent" maxlength="80" required></label>' +
+      '<label>Mapa<input name="map" maxlength="80" value="' + escape(match.map) + '" required></label></div>' +
+      '<div class="editor-row"><button name="action" value="premier/approve">Publicar resultado</button>' +
+      '<button name="action" value="premier/reject" formnovalidate>Descartar</button></div></form></article>'
+    ).join('') || empty('Nenhuma partida aguardando revisão.')) + '</div>' : '';
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -114,7 +131,7 @@ ${tools ? `<section id="staff"><h2>Ferramentas da staff</h2>${notice ? '<p class
 ${channelField}<button id="send-format">Enviar Components V2</button></form></div>
 <aside><h4>Prévia no Discord</h4><small id="preview-format">Components V2 · Layout largo</small>
 <div class="preview" id="embed-preview" data-format="v2" aria-label="Prévia da mensagem"><img class="preview-thumb" alt="Miniatura" hidden><small class="preview-author"></small><strong>Título da mensagem</strong><div class="preview-blocks"></div><img class="preview-banner" alt="Imagem da mensagem" hidden><small class="preview-footer"></small><div id="preview-buttons"></div></div></aside></div>
-<div class="command-list"><h3>Comandos do Discord</h3>${tools}</div></section>
+${premierPanel}<div class="command-list"><h3>Comandos do Discord</h3>${tools}</div></section>
 <script>
 const form = document.querySelector('#embed-form');
 const preview = document.querySelector('#embed-preview');

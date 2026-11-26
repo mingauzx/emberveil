@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { dashboard } from './dashboard.js';
 import { staffAction, getStaff } from './staff.js';
 import { lineupMessage } from './embed.js';
+import { premierSync } from './premier.js';
 
 const env = process.env;
 const directory = env.DATA_DIR || './data';
@@ -35,6 +36,7 @@ const trainings = db.prepare('SELECT * FROM training WHERE message IS NOT NULL A
 const attendance = db.prepare('SELECT name, answer FROM attendance WHERE training = ? ORDER BY name');
 const scores = db.prepare('SELECT * FROM scores ORDER BY date DESC LIMIT 30');
 
+const premier = premierSync(db, env);
 const login = discordLogin(env);
 let discordStaff;
 createServer(async (request, response) => {
@@ -55,7 +57,7 @@ createServer(async (request, response) => {
     const noticeCode = new URL(request.url, 'http://localhost').searchParams.get('status');
     const upcoming = trainings.all(Date.now()).map(row => ({ ...row, people: attendance.all(row.id) }));
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode, choices, signedIn));
+    response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode, choices, signedIn, staff ? { state: premier.state(), pending: premier.pending() } : null));
   } catch {
     response.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end('Falha na conexão com o Discord. Tente novamente.');
@@ -212,7 +214,7 @@ if (env.DISCORD_TOKEN) {
         body: { ...payload, allowed_mentions: allowedMentions }
       });
     },
-    commands, handle
+    premier, commands, handle
   };
   client.on(Events.InteractionCreate, async interaction => {
     try {

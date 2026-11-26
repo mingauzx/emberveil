@@ -24,3 +24,9 @@ Sem token, o processo inicia só o painel. Para hospedagem com acesso externo, u
 | `/gg` | Envia um cumprimento para o fim da partida. |
 
 O painel consulta os mesmos dados do bot. A staff também pode executar os comandos e enviar embeds clássicos e mensagens Components V2 com cargos, emojis personalizados e botões de link pelo painel. O modo largo (Components V2) é o padrão e aceita divisórias, imagens e seções, digitando o ID de um canal onde ela e o bot possam postar. O banco SQLite fica em `DATA_DIR`.
+
+## Importação Premier
+
+A importação fica desativada até o produto receber acesso oficial da Riot e o jogador de referência vincular sua conta com consentimento via Riot Sign On. Configure `RIOT_API_KEY` com a chave de produção, `RIOT_PREMIER_PUUID` com o identificador obtido da conta autorizada e `RIOT_VAL_REGION=br` para uma conta do Brasil. O vínculo Riot Sign On precisa ser concluído separadamente.
+
+O bot consulta o histórico a cada 15 minutos e aceita apenas partidas concluídas da fila `premier`. A staff revisa as sugestões no painel, preenche o adversário, confere o mapa e aprova ou descarta. A aprovação grava o placar uma vez por ID da Riot. Se a API não retornar uma partida como Premier, ela não entra na fila. O painel público mostra apenas os resultados aprovados.

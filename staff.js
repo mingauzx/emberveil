@@ -34,6 +34,9 @@ export async function staffAction(request, response, context, userId) {
   if (!form) return redirect('invalid');
   const { guild, member } = staff;
   const action = form.get('action');
+  if (action === 'premier/approve' || action === 'premier/reject') {
+    return redirect(context.premier.decide(action, form.get('match'), form.get('opponent')?.trim(), form.get('map')?.trim()));
+  }
   const [name, sub] = (action || '').split('/');
   const command = context.commands.find(command => command.name === name);
   const subcommand = sub && command?.options?.find(option => option.type === 1 && option.name === sub);

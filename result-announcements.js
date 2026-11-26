@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 export function resultAnnouncements(db, client, route, guildId, channelId, bannerUrl) {
@@ -5,6 +6,9 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
   db.exec(`CREATE TABLE IF NOT EXISTS result_summary (
     id INTEGER PRIMARY KEY CHECK (id = 1), message_id TEXT NOT NULL, digest TEXT NOT NULL
   )`);
+  const bannerName = 'results-banner.png';
+  const bannerFile = readFileSync(new URL('./assets/' + bannerName, import.meta.url));
+  const files = [{ name: bannerName, data: bannerFile, contentType: 'image/png' }];
   const all = db.prepare('SELECT opponent, map, ours, theirs, date FROM scores ORDER BY date DESC, id DESC');
   const stored = db.prepare('SELECT message_id, digest FROM result_summary WHERE id = 1');
   const record = db.prepare('INSERT OR REPLACE INTO result_summary VALUES (1, ?, ?)');
@@ -30,7 +34,7 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
       description += line;
     }
     const blocks = [];
-    if (bannerUrl) blocks.push({ type: 12, items: [{ media: { url: bannerUrl }, description: 'Resultados Premier' }] });
+    blocks.push({ type: 12, items: [{ media: { url: 'attachment://' + bannerName }, description: 'Resultados Premier' }] });
     blocks.push({ type: 10, content: '# Resultados gerais da Ember Veil' });
     blocks.push({ type: 14, divider: true, spacing: 1 });
     blocks.push({ type: 10, content: description });
@@ -38,17 +42,17 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
     const digest = createHash('sha256').update(JSON.stringify(components)).digest('hex');
     const previous = stored.get();
     if (previous?.digest === digest) return;
-    const body = { flags: 32768, components, allowed_mentions: { parse: [] } };
+    const body = { flags: 32768, components, attachments: [{ id: 0, filename: bannerName }], allowed_mentions: { parse: [] } };
     let message;
     if (previous) {
       try {
-        message = await client.rest.patch(route(channel.id) + '/' + previous.message_id, { body: { ...body, embeds: [] } });
+        message = await client.rest.patch(route(channel.id) + '/' + previous.message_id, { body: { ...body, embeds: [] }, files });
       } catch (error) {
         if (error.code !== 10008) throw error;
       }
     }
     message ||= await client.rest.post(route(channel.id), {
-      body: { ...body, nonce: 'ember-results-summary', enforce_nonce: true }
+      body: { ...body, nonce: 'ember-results-summary', enforce_nonce: true }, files
     });
     record.run(message.id, digest);
     console.log('Placar geral atualizado:', channel.id, message.id, results.length);

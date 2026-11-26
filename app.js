@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { discordLogin } from './login.js';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { dashboard } from './dashboard.js';
@@ -38,8 +38,20 @@ const scores = db.prepare('SELECT * FROM scores ORDER BY date DESC LIMIT 30');
 
 const premier = premierSync(db, env);
 const login = discordLogin(env);
+const lineupBanner = readFileSync(new URL('./assets/lineup-banner.png', import.meta.url));
+const bannerPath = '/assets/lineup-banner.png';
+const bannerUrl = env.PUBLIC_URL && new URL(bannerPath, env.PUBLIC_URL).href;
 let discordStaff;
 createServer(async (request, response) => {
+  if (request.url === bannerPath && ['GET', 'HEAD'].includes(request.method)) {
+    response.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Length': lineupBanner.length,
+      'Cache-Control': 'public, max-age=86400'
+    });
+    response.end(request.method === 'HEAD' ? undefined : lineupBanner);
+    return;
+  }
   response.setHeader('Cache-Control', 'no-store');
   try {
     const userId = await login(request, response);
@@ -131,7 +143,7 @@ if (env.DISCORD_TOKEN) {
       return reply(i, 'Prezada equipe adversária, agradecemos pela partida. Desejamos boa sorte nos próximos jogos. GG!', false);
     }
     if (i.commandName === 'lineup') {
-      return i.reply(lineupMessage(roster.all().slice(0, 20)));
+      return i.reply(lineupMessage(roster.all().slice(0, 20), bannerUrl));
     }
 
     const roles = i.member?.roles;

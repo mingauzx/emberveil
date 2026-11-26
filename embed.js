@@ -19,8 +19,11 @@ function httpsUrl(value) {
   }
 }
 
-export function lineupMessage(rows) {
-  const components = [text('# Escalação Ember Veil')];
+export function lineupMessage(rows, bannerUrl) {
+  const header = bannerUrl
+    ? { type: 12, items: [{ media: { url: bannerUrl }, description: 'Escalação Ember Veil' }] }
+    : text('# Escalação Ember Veil');
+  const components = [header];
   for (const [slot, heading] of [['Titular', 'Titulares'], ['Reserva', 'Reservas']]) {
     const players = rows.filter(row => row.slot === slot);
     if (!players.length) continue;

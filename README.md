@@ -19,8 +19,8 @@ Sem token, o processo inicia só o painel. Para hospedagem com acesso externo, u
 | --- | --- |
 | `/treino marcar` | Publica treino ou scrim com botões de presença. Informe a data no formato ISO com fuso, como `2027-01-10T20:00-04:00`. |
 | `/elenco definir`, `/elenco remover` | Gerencia jogadores, funções e vagas de titular ou reserva. |
-| `/lineup` | Mostra a escalação do time. |
+| `/lineup` | Publica a escalação em Components V2, com titulares e reservas. |
 | `/resultado` | Registra adversário, mapa e placar. |
 | `/gg` | Envia um cumprimento para o fim da partida. |
 
-O painel consulta os mesmos dados do bot. A staff também pode executar os comandos e enviar embeds clássicos e mensagens Components V2 com cargos, emojis personalizados e botões de link pelo painel, digitando o ID de um canal onde ela e o bot possam postar. O banco SQLite fica em `DATA_DIR`.
+O painel consulta os mesmos dados do bot. A staff também pode executar os comandos e enviar embeds clássicos e mensagens Components V2 com cargos, emojis personalizados e botões de link pelo painel. O modo largo (Components V2) é o padrão e aceita divisórias, imagens e seções, digitando o ID de um canal onde ela e o bot possam postar. O banco SQLite fica em `DATA_DIR`.

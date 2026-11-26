@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { dashboard } from './dashboard.js';
 import { staffAction, getStaff } from './staff.js';
+import { lineupMessage } from './embed.js';
 
 const env = process.env;
 const directory = env.DATA_DIR || './data';
@@ -66,7 +67,7 @@ if (env.DISCORD_TOKEN && !env.DISCORD_GUILD_ID) {
 }
 
 if (env.DISCORD_TOKEN) {
-  const { Client, Events, GatewayIntentBits, PermissionFlagsBits, MessageFlags } = await import('discord.js');
+  const { Client, Events, GatewayIntentBits, PermissionFlagsBits, MessageFlags, Routes } = await import('discord.js');
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
   const string = (name, description, max_length = 80) => ({ type: 3, name, description, required: true, max_length });
   const user = { type: 6, name: 'jogador', description: 'Membro do time', required: true };
@@ -128,8 +129,7 @@ if (env.DISCORD_TOKEN) {
       return reply(i, 'Prezada equipe adversária, agradecemos pela partida. Desejamos boa sorte nos próximos jogos. GG!', false);
     }
     if (i.commandName === 'lineup') {
-      const lines = roster.all().slice(0, 20).map(row => `• <@${row.player}> · ${row.role} · ${row.slot}`);
-      return reply(i, lines.length ? '**Escalação Ember Veil**\n' + lines.join('\n') : 'O elenco ainda está vazio.', false);
+      return i.reply(lineupMessage(roster.all().slice(0, 20)));
     }
 
     const roles = i.member?.roles;
@@ -205,6 +205,13 @@ if (env.DISCORD_TOKEN) {
     sendMessages: PermissionFlagsBits.SendMessages,
     embedLinks: PermissionFlagsBits.EmbedLinks,
     mentionEveryone: PermissionFlagsBits.MentionEveryone,
+    sendMessage: (channel, message) => {
+      if (message.flags !== MessageFlags.IsComponentsV2) return channel.send(message);
+      const { allowedMentions, ...payload } = message;
+      return client.rest.post(Routes.channelMessages(channel.id), {
+        body: { ...payload, allowed_mentions: allowedMentions }
+      });
+    },
     commands, handle
   };
   client.on(Events.InteractionCreate, async interaction => {

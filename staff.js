@@ -20,7 +20,7 @@ async function formData(request) {
   let size = 0;
   for await (const chunk of request) {
     size += chunk.length;
-    if (size > 45000) return null;
+    if (size > 145000) return null;
     chunks.push(chunk);
   }
   return new URLSearchParams(Buffer.concat(chunks).toString());
@@ -46,7 +46,7 @@ export async function staffAction(request, response, context, userId) {
     const channelId = form.get('channel')?.trim() || '';
     channel = snowflake.test(channelId) ? await guild.channels.fetch(channelId).catch(() => null) : null;
     const permissions = [context.viewChannel, context.sendMessages];
-    if ((name === 'embed' && form.get('format') !== 'v2') || name === 'treino') permissions.push(context.embedLinks);
+    if ((name === 'embed' && form.get('format') === 'classic') || name === 'treino') permissions.push(context.embedLinks);
     if (!channel?.isSendable() || channel.isThread() ||
         !channel.permissionsFor(member)?.has(permissions.slice(0, 2)) ||
         !channel.permissionsFor(guild.members.me)?.has(permissions)) {
@@ -58,8 +58,8 @@ export async function staffAction(request, response, context, userId) {
     if (name === 'embed') {
       const message = composeEmbed(form, guild, channel, member, context.mentionEveryone);
       if (!message) return redirect('invalid');
-      await channel.send(message);
-      return redirect('ok');
+      await context.sendMessage(channel, message);
+      return redirect(message.flags === 32768 ? 'sent-v2' : 'sent-classic');
     }
 
     const values = new Map();
@@ -84,7 +84,7 @@ export async function staffAction(request, response, context, userId) {
     const send = async options => {
       if (options.flags) return;
       const { withResponse, ...message } = options;
-      const sent = await channel.send(message);
+      const sent = await context.sendMessage(channel, message);
       return { resource: { message: sent } };
     };
     await context.handle({

@@ -10,7 +10,7 @@ const empty = message => '<p class="empty">' + message + '</p>';
 
 const channelField = '<label> ID do canal <input name="channel" required inputmode="numeric" pattern="[0-9]{17,20}" placeholder="Cole o ID do canal"></label>';
 const statuses = new Map([
-  ['ok', 'Ação concluída.'], ['invalid', 'Revise os campos e tente novamente.'],
+  ['ok', 'Ação concluída.'], ['sent-v2', 'Mensagem Components V2 enviada.'], ['sent-classic', 'Embed clássico enviado.'], ['invalid', 'Revise os campos e tente novamente.'],
   ['channel', 'Escolha um canal onde você e o bot possam enviar mensagens. Para embeds, dê ao bot a permissão de inserir links.'],
   ['full', 'As cinco vagas de titular estão preenchidas.'], ['failed', 'O Discord não concluiu a ação. Confira o canal antes de tentar novamente.']
 ]);
@@ -48,9 +48,9 @@ export function dashboard(trainings, roster, matches, commands = [], noticeCode,
   const emojiOptions = (choices?.emojis || []).map(emoji =>
     '<option value="' + escape(emoji.id) + '" data-markup="' + escape('<' + (emoji.animated ? 'a' : '') + ':' + emoji.name + ':' + emoji.id + '>') + '">:' + escape(emoji.name) + ':</option>'
   ).join('');
-  const buttons = [1, 2, 3].map(index =>
+  const buttons = [1, 2, 3, 4, 5].map(index =>
     '<div class="editor-row"><label>Texto do botão ' + index + '<input name="button_label_' + index + '" maxlength="80"></label>' +
-    '<label>URL do botão ' + index + '<input name="button_url_' + index + '" type="url" maxlength="512" placeholder="https://"></label></div>'
+    '<label>URL do botão ' + index + '<input name="button_url_' + index + '" type="url" maxlength="512" placeholder="https://"></label><label>Emoji do botão ' + index + '<select name="button_emoji_' + index + '"><option value="">Sem emoji</option>' + emojiOptions + '</select></label></div>'
   ).join('');
   const visits = trainings.map(event => {
     const groups = ['Confirmado', 'Talvez', 'Ausente'].map(status => {
@@ -70,6 +70,10 @@ export function dashboard(trainings, roster, matches, commands = [], noticeCode,
       '</td><td><strong>' + match.ours + ' × ' + match.theirs + '</strong></td><td>' +
       status + '</td><td>' + time.format(match.date) + '</td></tr>';
   }).join('');
+  const extraFields = [1, 2, 3].map(index =>
+    '<div class="editor-group"><label>Título da seção ' + index + '<input name="field_title_' + index + '" maxlength="100"></label>' +
+    '<label>Texto da seção ' + index + '<textarea name="field_body_' + index + '" maxlength="1024" rows="3"></textarea></label></div>'
+  ).join('');
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -87,6 +91,7 @@ article,.empty,.preview,.notice{padding:16px;border-left:2px solid #9d4a45;backg
 ul{margin:0;padding:0;list-style:none}li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}.tag{font-size:.76rem;font-weight:700;color:var(--accent);background:#3c2429;padding:5px 9px}.scroll{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}td,th{padding:12px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:.84rem}
 .editor-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editor-row button{margin-top:6px}.editor-row label{align-content:start}.check{display:flex;align-items:center;gap:8px}.check input{width:auto;min-height:auto}.preview img{width:1.25em;vertical-align:middle}.preview button{margin:10px 8px 0 0;padding:6px 9px;opacity:.75}.preview p:empty,.preview strong:empty{display:none}.preview[data-format=v2]{border:1px solid #58414b;border-left-width:3px;border-radius:8px}form{display:grid;gap:12px;margin-top:12px}label{display:grid;gap:5px;color:var(--muted);font-size:.9rem}input,textarea,select,button{font:inherit}input,textarea,select{width:100%;min-height:40px;background:#100e11;color:#fff;border:1px solid #58414b;border-radius:4px;padding:9px}input[type=color]{max-width:90px;padding:4px}textarea{resize:vertical}button{justify-self:start;border:0;border-radius:4px;padding:10px 15px;background:var(--accent);color:#1b1012;font-weight:800;cursor:pointer}button:hover{background:#ffab98}details{padding:12px;border-bottom:1px solid var(--line)}summary{cursor:pointer;font-weight:650}
 @media(max-width:760px){.grid,.staff-grid{grid-template-columns:1fr;gap:0}.staff-grid{gap:24px}.hero{padding-top:42px}nav{gap:12px}main,nav{padding-inline:16px}.stats div{padding:12px 9px}.stats small{font-size:.75rem}section{padding:16px}}@media(max-width:400px){.attendance{grid-template-columns:1fr}}
+.studio{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px}.studio>div,.studio>aside{min-width:0}.studio aside{position:sticky;top:16px;align-self:start;padding:16px;background:#100f12;border:1px solid var(--line);border-radius:5px}.studio aside h4{margin:0 0 8px}.studio .preview{background:#211f25;min-height:110px}.studio .preview[data-format=v2]{max-width:100%;padding:18px}.studio .preview[data-format=classic]{max-width:420px}.studio form details{border:1px solid var(--line);border-radius:5px}.studio form details[open]>*+*{margin-top:10px}.studio .editor-group{display:grid;gap:8px;padding:10px;background:#221a20;border-radius:4px}.studio .preview-banner{display:block;max-width:100%;border-radius:4px;margin-top:12px}.studio .preview-thumb{float:right;width:62px;height:62px;object-fit:cover;border-radius:4px;margin:0 0 8px 10px}.studio .preview strong{font-size:1.25rem}.studio .preview small{margin-top:6px}.studio .preview hr{border:0;border-top:1px solid #514852;margin:10px 0}.studio .preview h4{margin:10px 0 4px}.studio .preview h4+p{margin-top:0}.studio .preview img[hidden]{display:none}.command-list{border-top:1px solid var(--line);padding-top:16px}@media(max-width:760px){.studio{grid-template-columns:1fr}.studio aside{position:static}}
 </style>
 </head>
 <body><header><nav aria-label="Painel"><strong>EMBER VEIL</strong><a href="#treinos">Treinos</a><a href="#elenco">Elenco</a><a href="#historico">Histórico</a>${tools ? '<a href="#staff">Staff</a>' : ''}${signedIn ? '<a href="/sair">Sair</a>' : '<a href="/auth/discord">Entrar com Discord</a>'}</nav></header>
@@ -95,26 +100,31 @@ ul{margin:0;padding:0;list-style:none}li{display:flex;justify-content:space-betw
 <section id="elenco"><h2>Escalação</h2>${players ? '<ul>' + players + '</ul>' : empty('Nenhum jogador cadastrado. Use /elenco definir no Discord.')}</section></div>
 <section id="historico"><h2>Últimas partidas</h2>${results ? '<div class="scroll"><table><thead><tr><th>Adversário</th><th>Mapa</th><th>Placar</th><th>Resultado</th><th>Data</th></tr></thead><tbody>' + results + '</tbody></table></div>' : empty('Nenhuma partida registrada. Use /resultado no Discord.')}</section>
 ${tools ? `<section id="staff"><h2>Ferramentas da staff</h2>${notice ? '<p class="notice" role="status">' + notice + '</p>' : ''}
-<div class="staff-grid"><div><h3>Criar embed</h3><form id="embed-form" method="post" action="/staff"><input type="hidden" name="action" value="embed">
+<div class="studio"><div><h3>Criar mensagem</h3><form id="embed-form" method="post" action="/staff"><input type="hidden" name="action" value="embed">
 <label>Título<input name="title" maxlength="256"></label><label>Descrição<textarea name="description" maxlength="4096" rows="5"></textarea></label>
-<div class="editor-row"><label>Formato<select name="format"><option value="classic">Embed clássico</option><option value="v2">Components V2</option></select></label><label>Cor <input name="color" type="color" value="#ff8069"></label></div>
+<div class="editor-row"><label>Formato<select name="format"><option value="v2" selected>Components V2 · Layout largo</option><option value="classic">Embed clássico</option></select></label><label>Cor <input name="color" type="color" value="#ff8069"></label></div>
 <div class="editor-row"><div><label>Cargo<select name="role"><option value="">Selecione</option>${roleOptions}</select></label><button type="button" data-insert="role">Inserir cargo</button></div>
 <div><label>Emoji personalizado<select name="emoji"><option value="">Selecione</option>${emojiOptions}</select></label><button type="button" data-insert="emoji">Inserir emoji</button></div></div>
 <label class="check"><input name="ping" type="checkbox"> Notificar o cargo selecionado</label>
+<details><summary>Autor, imagem e rodapé</summary>
+<label>Autor<input name="author" maxlength="256"></label><div class="editor-row"><label>URL da imagem<input name="banner" type="url" maxlength="2000" placeholder="https://"></label><label>URL da miniatura<input name="thumbnail" type="url" maxlength="2000" placeholder="https://"></label></div><label>Rodapé<input name="footer" maxlength="500"></label></details>
+<details><summary>Seções adicionais</summary>${extraFields}</details>
 <details><summary>Botões de link</summary>${buttons}</details>
-<div class="preview" id="embed-preview" aria-label="Prévia do embed"><strong>Título do embed</strong><p>A descrição aparece aqui.</p><div id="preview-buttons"></div></div>
-${channelField}<button>Enviar embed</button></form></div><div><h3>Comandos do Discord</h3>${tools}</div></div></section>
+<label class="check"><input name="dividers" type="checkbox" checked> Divisórias entre blocos no V2</label>
+${channelField}<button id="send-format">Enviar Components V2</button></form></div>
+<aside><h4>Prévia no Discord</h4><small id="preview-format">Components V2 · Layout largo</small>
+<div class="preview" id="embed-preview" data-format="v2" aria-label="Prévia da mensagem"><img class="preview-thumb" alt="Miniatura" hidden><small class="preview-author"></small><strong>Título da mensagem</strong><div class="preview-blocks"></div><img class="preview-banner" alt="Imagem da mensagem" hidden><small class="preview-footer"></small><div id="preview-buttons"></div></div></aside></div>
+<div class="command-list"><h3>Comandos do Discord</h3>${tools}</div></section>
 <script>
 const form = document.querySelector('#embed-form');
 const preview = document.querySelector('#embed-preview');
-const description = form.elements.description;
+let insertTarget = form.elements.description;
+form.addEventListener('focusin', event => {
+  if (event.target.tagName === 'TEXTAREA') insertTarget = event.target;
+});
 const roleOptions = new Map([...form.elements.role.options].map(option => [option.value, option.textContent]));
 const emojiOptions = new Map([...form.elements.emoji.options].map(option => [option.value, option.textContent]));
-function updatePreview() {
-  preview.querySelector('strong').textContent = form.elements.title.value || 'Título do embed';
-  const body = preview.querySelector('p');
-  body.replaceChildren();
-  const value = description.value || 'A descrição aparece aqui.';
+function renderText(body, value) {
   for (const part of value.split(/(<@&[0-9]+>|<a?:[a-zA-Z0-9_]+:[0-9]+>)/g)) {
     if (part.startsWith('<@&') && roleOptions.has(part.slice(3, -1))) {
       body.append(roleOptions.get(part.slice(3, -1)));
@@ -128,17 +138,54 @@ function updatePreview() {
       body.append(part);
     }
   }
+}
+function updatePreview() {
+  const wide = form.elements.format.value === 'v2';
+  const separator = wide && form.elements.dividers.checked;
+  document.querySelector('#send-format').textContent = wide ? 'Enviar Components V2' : 'Enviar embed clássico';
+  document.querySelector('#preview-format').textContent = wide ? 'Components V2 · Layout largo' : 'Embed clássico';
+  form.elements.dividers.disabled = !wide;
+  preview.querySelector('strong').textContent = form.elements.title.value || 'Título da mensagem';
+  preview.querySelector('.preview-author').textContent = form.elements.author.value;
+  preview.querySelector('.preview-footer').textContent = form.elements.footer.value;
+  const blocks = preview.querySelector('.preview-blocks');
+  blocks.replaceChildren();
+  const body = document.createElement('p');
+  if (separator && form.elements.description.value) blocks.append(document.createElement('hr'));
+  renderText(body, form.elements.description.value || 'A descrição aparece aqui.');
+  blocks.append(body);
+  for (let index = 1; index <= 3; index++) {
+    const heading = form.elements['field_title_' + index].value.trim();
+    const value = form.elements['field_body_' + index].value.trim();
+    if (!heading && !value) continue;
+    if (separator) blocks.append(document.createElement('hr'));
+    const title = document.createElement('h4');
+    title.textContent = heading;
+    const field = document.createElement('p');
+    renderText(field, value);
+    blocks.append(title, field);
+  }
+  for (const [field, selector] of [['banner', '.preview-banner'], ['thumbnail', '.preview-thumb']]) {
+    const image = preview.querySelector(selector);
+    const url = form.elements[field].value.trim();
+    let address;
+    try { address = new URL(url); } catch {}
+    image.hidden = address?.protocol !== 'https:' || Boolean(address.username || address.password);
+    if (image.hidden) image.removeAttribute('src');
+    else if (image.getAttribute('src') !== address.href) image.src = address.href;
+  }
   preview.style.borderLeftColor = form.elements.color.value;
   preview.dataset.format = form.elements.format.value;
   const buttons = document.querySelector('#preview-buttons');
   buttons.replaceChildren();
-  for (let index = 1; index <= 3; index++) {
+  for (let index = 1; index <= 5; index++) {
     const label = form.elements['button_label_' + index].value.trim();
     if (!label) continue;
     const button = document.createElement('button');
     button.type = 'button';
     button.disabled = true;
-    button.textContent = label;
+    const emoji = form.elements['button_emoji_' + index].selectedOptions[0]?.dataset.markup;
+    renderText(button, emoji ? emoji + ' ' + label : label);
     buttons.append(button);
   }
 }
@@ -148,13 +195,14 @@ form.addEventListener('click', event => {
   if (!name) return;
   const markup = form.elements[name].selectedOptions[0]?.dataset.markup;
   if (!markup) return;
-  const start = description.selectionStart;
-  const end = description.selectionEnd;
-  if (description.value.length - (end - start) + markup.length + 1 > description.maxLength) return;
-  description.setRangeText(markup + ' ', start, end, 'end');
-  description.focus();
+  const start = insertTarget.selectionStart;
+  const end = insertTarget.selectionEnd;
+  if (insertTarget.value.length - (end - start) + markup.length + 1 > insertTarget.maxLength) return;
+  insertTarget.setRangeText(markup + ' ', start, end, 'end');
+  insertTarget.focus();
   updatePreview();
 });
+updatePreview();
 </script>` : ''}
 </main></body></html>`;
 }

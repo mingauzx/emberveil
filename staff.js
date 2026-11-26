@@ -10,6 +10,18 @@ export async function getStaff(context, userId) {
     ? { guild, member } : null;
 }
 
+export function canSendTo(channel, staff, context, needsEmbedLinks = false) {
+  if (!channel?.isSendable() || channel.isThread()) return false;
+  const permissions = [context.viewChannel, context.sendMessages];
+  const botPermissions = needsEmbedLinks ? [...permissions, context.embedLinks] : permissions;
+  return Boolean(channel.permissionsFor(staff.member)?.has(permissions) &&
+    channel.permissionsFor(staff.guild.members.me)?.has(botPermissions));
+}
+
+export function memberChoice(member) {
+  return { id: member.id, name: member.displayName, username: member.user.username };
+}
+
 export function commandOptions(command, subcommand) {
   return subcommand ? subcommand.options : (command.options || []);
 }
@@ -58,11 +70,8 @@ export async function staffAction(request, response, context, userId) {
   if (name !== 'elenco' && name !== 'resultado') {
     const channelId = form.get('channel')?.trim() || '';
     channel = snowflake.test(channelId) ? await guild.channels.fetch(channelId).catch(() => null) : null;
-    const permissions = [context.viewChannel, context.sendMessages];
-    if ((name === 'embed' && form.get('format') === 'classic') || name === 'treino') permissions.push(context.embedLinks);
-    if (!channel?.isSendable() || channel.isThread() ||
-        !channel.permissionsFor(member)?.has(permissions.slice(0, 2)) ||
-        !channel.permissionsFor(guild.members.me)?.has(permissions)) {
+    const needsEmbedLinks = (name === 'embed' && form.get('format') === 'classic') || name === 'treino';
+    if (!canSendTo(channel, staff, context, needsEmbedLinks)) {
       return redirect('channel');
     }
   }

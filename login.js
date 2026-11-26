@@ -60,11 +60,11 @@ export function discordLogin(env, requestDiscord = fetch) {
       response.writeHead(403).end('Acesso negado.');
       return false;
     }
-    if (request.method !== 'GET' || !['/', '/auth/discord', '/auth/discord/callback', '/sair'].includes(path)) {
+    if (request.method !== 'GET' || !['/', '/staff/members', '/auth/discord', '/auth/discord/callback', '/sair'].includes(path)) {
       response.writeHead(404).end();
       return false;
     }
-    if (path === '/') {
+    if (path === '/' || path === '/staff/members') {
       const session = (request.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith('ember_session='));
       return secret && verify(session?.slice('ember_session='.length), 'session', secret) || 'public';
     }

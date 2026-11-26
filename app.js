@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { dashboard } from './dashboard.js';
-import { staffAction, getStaff } from './staff.js';
+import { staffAction, getStaff, canSendTo, memberChoice } from './staff.js';
 import { lineupMessage } from './embed.js';
 import { premierSync } from './premier.js';
 import { embedDrafts } from './drafts.js';
@@ -80,13 +80,39 @@ createServer(async (request, response) => {
     }
     const signedIn = userId !== 'public';
     const staff = signedIn ? await getStaff(discordStaff, userId).catch(() => null) : null;
-    const choices = staff ? {
-      roles: [...staff.guild.roles.cache.values()].filter(role => role.id !== staff.guild.id),
-      emojis: [...staff.guild.emojis.cache.values()].filter(emoji => emoji.available !== false)
-    } : null;
-    const query = new URL(request.url, 'http://localhost').searchParams;
-    const noticeCode = query.get('status');
-    const draftState = staff ? { entries: drafts.list(), selected: drafts.read(query.get('draft')) } : null;
+    const url = new URL(request.url, 'http://localhost');
+    if (url.pathname === '/staff/members' && request.method === 'GET') {
+      if (!staff) return response.writeHead(403).end();
+      const query = url.searchParams.get('q')?.trim() || '';
+      const members = query && query.length <= 32
+        ? await staff.guild.members.search({ query, limit: 15, cache: false })
+        : [];
+      return response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+        .end(JSON.stringify([...members.values()].map(memberChoice)));
+    }
+    const noticeCode = url.searchParams.get('status');
+    const draftState = staff ? { entries: drafts.list(), selected: drafts.read(url.searchParams.get('draft')) } : null;
+    let choices = null;
+    if (staff) {
+      const draft = draftState.selected?.data || {};
+      const mentionIds = new Set(Object.values(draft).flatMap(value =>
+        [...value.matchAll(/<@!?(\d{17,20})>/g)].map(match => match[1])));
+      const [channels, members] = await Promise.all([
+        staff.guild.channels.fetch().catch(() => staff.guild.channels.cache),
+        Promise.all([...mentionIds].slice(0, 20).map(id => staff.guild.members.fetch(id).catch(() => null)))
+      ]);
+      choices = {
+        channels: [...channels.values()].filter(channel => canSendTo(channel, staff, discordStaff))
+          .map(channel => ({ id: channel.id, name: channel.name, category: channel.parent?.name || '',
+            classic: canSendTo(channel, staff, discordStaff, true) }))
+          .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
+        roles: [...staff.guild.roles.cache.values()].filter(role => role.id !== staff.guild.id)
+          .sort((a, b) => b.position - a.position),
+        emojis: [...staff.guild.emojis.cache.values()].filter(emoji => emoji.available !== false)
+          .sort((a, b) => a.name.localeCompare(b.name)),
+        members: members.filter(Boolean).map(memberChoice)
+      };
+    }
     const upcoming = trainings.all(Date.now()).map(row => ({ ...row, people: attendance.all(row.id) }));
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode, choices, signedIn, staff ? { state: premier.state(), pending: premier.pending() } : null, draftState));

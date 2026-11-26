@@ -4,7 +4,7 @@ const idPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 const limits = {
   title: 256, description: 4096, author: 256, footer: 500,
   banner: 2000, thumbnail: 2000, format: 7, color: 7,
-  role: 20, channel: 20, ping: 2, dividers: 2
+  role: 20, channel: 20, ping: 2, ping_members: 2, dividers: 2
 };
 for (let index = 1; index <= 5; index++) {
   limits['button_label_' + index] = 80;

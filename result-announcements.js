@@ -11,6 +11,13 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
       INSERT INTO result_announcements (score_id) VALUES (NEW.id);
     END;
   `);
+  // Publish the most recent existing result requested in the results channel.
+  db.prepare(`INSERT OR IGNORE INTO result_announcements (score_id)
+    SELECT id FROM scores WHERE opponent = ? AND map = ? AND ours = ? AND theirs = ?
+      AND date >= ? AND date < ? ORDER BY date DESC LIMIT 1`).run(
+    'Armageddon', 'Abyss', 13, 7,
+    Date.parse('2026-11-26T04:02:00Z'), Date.parse('2026-11-26T04:03:00Z')
+  );
   const pending = db.prepare(`SELECT scores.* FROM result_announcements
     JOIN scores ON scores.id = score_id WHERE message_id IS NULL ORDER BY scores.date LIMIT 20`);
   const delivered = db.prepare('UPDATE result_announcements SET message_id = ? WHERE score_id = ?');
@@ -40,6 +47,7 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
           }]
         } });
         delivered.run(message.id, match.id);
+        console.log('Resultado publicado:', channel.id, message.id);
       }
     } catch (error) {
       console.error('Falha ao publicar resultado:', error.code || error.message);

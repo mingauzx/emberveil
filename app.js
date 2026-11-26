@@ -33,6 +33,18 @@ db.exec(`
     ours INTEGER NOT NULL, theirs INTEGER NOT NULL, date INTEGER NOT NULL
   );
 `);
+// Remove the explicitly identified test result from the original dashboard.
+const testScore = db.prepare(`SELECT id FROM scores
+  WHERE opponent = 'a' AND map = 'a' AND ours = 2 AND theirs = 1
+    AND date >= ? AND date < ?`).all(
+  Date.parse('2026-11-26T03:12:00Z'), Date.parse('2026-11-26T03:13:00Z')
+);
+if (testScore.length === 1) {
+  const queued = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'result_announcements'").get();
+  if (!queued || !db.prepare('SELECT 1 FROM result_announcements WHERE score_id = ?').get(testScore[0].id)) {
+    db.prepare('DELETE FROM scores WHERE id = ?').run(testScore[0].id);
+  }
+}
 const roster = db.prepare('SELECT * FROM roster ORDER BY slot DESC, name');
 const trainings = db.prepare('SELECT * FROM training WHERE message IS NOT NULL AND date > ? ORDER BY date LIMIT 20');
 const attendance = db.prepare('SELECT name, answer FROM attendance WHERE training = ? ORDER BY name');

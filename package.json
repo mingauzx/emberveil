@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env app.js",
-    "check": "node --check app.js && node --check dashboard.js && node --check login.js && node --check staff.js && node --check embed.js && node --check premier.js"
+    "check": "node --check app.js && node --check dashboard.js && node --check login.js && node --check staff.js && node --check embed.js && node --check premier.js && node --check drafts.js"
   },
   "dependencies": {
     "discord.js": "14.26.2"

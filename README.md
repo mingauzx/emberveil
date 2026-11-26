@@ -30,3 +30,5 @@ O painel consulta os mesmos dados do bot. A staff também pode executar os coman
 A importação fica desativada até o produto receber acesso oficial da Riot e o jogador de referência vincular sua conta com consentimento via Riot Sign On. Configure `RIOT_API_KEY` com a chave de produção, `RIOT_PREMIER_PUUID` com o identificador obtido da conta autorizada e `RIOT_VAL_REGION=br` para uma conta do Brasil. O vínculo Riot Sign On precisa ser concluído separadamente.
 
 O bot consulta o histórico a cada 15 minutos e aceita apenas partidas concluídas da fila `premier`. A staff revisa as sugestões no painel, preenche o adversário, confere o mapa e aprova ou descarta. A aprovação grava o placar uma vez por ID da Riot. Se a API não retornar uma partida como Premier, ela não entra na fila. O painel público mostra apenas os resultados aprovados.
+
+Na aba Staff, dê um nome à mensagem e use **Salvar rascunho** para guardar os campos do editor. Abra pelo seletor **Embeds salvos**. As opções **Salvar rascunho** e **Salvar cópia** atualizam o rascunho aberto ou criam outra versão, respectivamente. Enviar ao Discord é uma ação separada.

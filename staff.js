@@ -27,13 +27,21 @@ async function formData(request) {
 }
 
 export async function staffAction(request, response, context, userId) {
-  const redirect = status => response.writeHead(303, { Location: '/?status=' + status + '#staff' }).end();
+  const redirect = (status, draftId) => {
+    const params = new URLSearchParams({ status });
+    if (draftId) params.set('draft', draftId);
+    response.writeHead(303, { Location: '/?' + params + '#staff' }).end();
+  };
   const staff = await getStaff(context, userId).catch(() => null);
   if (!staff) return response.writeHead(403).end('Acesso restrito à staff da Ember Veil.');
   const form = await formData(request);
   if (!form) return redirect('invalid');
   const { guild, member } = staff;
   const action = form.get('action');
+  if (action === 'draft/save' || action === 'draft/copy') {
+    const result = context.drafts.save(form, action === 'draft/copy');
+    return redirect(result.status, result.id);
+  }
   if (action === 'premier/approve' || action === 'premier/reject') {
     return redirect(context.premier.decide(action, form.get('match'), form.get('opponent')?.trim(), form.get('map')?.trim()));
   }
@@ -62,7 +70,7 @@ export async function staffAction(request, response, context, userId) {
       const message = composeEmbed(form, guild, channel, member, context.mentionEveryone);
       if (!message) return redirect('invalid');
       await context.sendMessage(channel, message);
-      return redirect(message.flags === 32768 ? 'sent-v2' : 'sent-classic');
+      return redirect(message.flags === 32768 ? 'sent-v2' : 'sent-classic', context.drafts.read(form.get('draft_id'))?.id);
     }
 
     const values = new Map();

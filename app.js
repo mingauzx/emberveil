@@ -8,6 +8,7 @@ import { dashboard } from './dashboard.js';
 import { staffAction, getStaff } from './staff.js';
 import { lineupMessage } from './embed.js';
 import { premierSync } from './premier.js';
+import { embedDrafts } from './drafts.js';
 
 const env = process.env;
 const directory = env.DATA_DIR || './data';
@@ -37,6 +38,7 @@ const attendance = db.prepare('SELECT name, answer FROM attendance WHERE trainin
 const scores = db.prepare('SELECT * FROM scores ORDER BY date DESC LIMIT 30');
 
 const premier = premierSync(db, env);
+const drafts = embedDrafts(db);
 const login = discordLogin(env);
 const lineupBanner = readFileSync(new URL('./assets/lineup-banner.png', import.meta.url));
 const bannerPath = '/assets/lineup-banner.png';
@@ -66,10 +68,12 @@ createServer(async (request, response) => {
       roles: [...staff.guild.roles.cache.values()].filter(role => role.id !== staff.guild.id),
       emojis: [...staff.guild.emojis.cache.values()].filter(emoji => emoji.available !== false)
     } : null;
-    const noticeCode = new URL(request.url, 'http://localhost').searchParams.get('status');
+    const query = new URL(request.url, 'http://localhost').searchParams;
+    const noticeCode = query.get('status');
+    const draftState = staff ? { entries: drafts.list(), selected: drafts.read(query.get('draft')) } : null;
     const upcoming = trainings.all(Date.now()).map(row => ({ ...row, people: attendance.all(row.id) }));
     response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode, choices, signedIn, staff ? { state: premier.state(), pending: premier.pending() } : null));
+    response.end(dashboard(upcoming, roster.all(), scores.all(), staff ? discordStaff.commands : [], noticeCode, choices, signedIn, staff ? { state: premier.state(), pending: premier.pending() } : null, draftState));
   } catch {
     response.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
     response.end('Falha na conexão com o Discord. Tente novamente.');
@@ -226,7 +230,7 @@ if (env.DISCORD_TOKEN) {
         body: { ...payload, allowed_mentions: allowedMentions }
       });
     },
-    premier, commands, handle
+    premier, drafts, commands, handle
   };
   client.on(Events.InteractionCreate, async interaction => {
     try {

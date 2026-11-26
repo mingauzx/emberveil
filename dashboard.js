@@ -10,7 +10,9 @@ const empty = message => '<p class="empty">' + message + '</p>';
 
 const channelField = '<label> ID do canal <input name="channel" required inputmode="numeric" pattern="[0-9]{17,20}" placeholder="Cole o ID do canal"></label>';
 const statuses = new Map([
-  ['ok', 'Ação concluída.'], ['premier-approved', 'Resultado Premier publicado.'],
+  ['ok', 'Ação concluída.'], ['draft-saved', 'Rascunho salvo.'],
+  ['draft-invalid', 'Informe um nome de até 100 caracteres e confira o tamanho dos campos.'],
+  ['draft-conflict', 'Outra edição foi salva antes da sua. O painel abriu a versão mais recente.'], ['premier-approved', 'Resultado Premier publicado.'],
   ['premier-rejected', 'Partida descartada.'], ['premier-reviewed', 'Essa partida já foi revisada.'], ['sent-v2', 'Mensagem Components V2 enviada.'], ['sent-classic', 'Embed clássico enviado.'], ['invalid', 'Revise os campos e tente novamente.'],
   ['channel', 'Escolha um canal onde você e o bot possam enviar mensagens. Para embeds, dê ao bot a permissão de inserir links.'],
   ['full', 'As cinco vagas de titular estão preenchidas.'], ['failed', 'O Discord não concluiu a ação. Confira o canal antes de tentar novamente.']
@@ -37,12 +39,20 @@ function webCommand(command, subcommand) {
     fields + (command.name === 'elenco' ? '' : channelField) + '<button>Executar comando</button></form></details>';
 }
 
-export function dashboard(trainings, roster, matches, commands = [], noticeCode, choices = null, signedIn = false, premier = null) {
+export function dashboard(trainings, roster, matches, commands = [], noticeCode, choices = null, signedIn = false, premier = null, drafts = null) {
   const tools = commands.flatMap(command => {
     const subcommands = command.options?.filter(option => option.type === 1) || [];
     return subcommands.length ? subcommands.map(sub => webCommand(command, sub)) : [webCommand(command)];
   }).join('');
   const notice = statuses.get(noticeCode);
+  const selectedDraft = drafts?.selected;
+  const draftOptions = (drafts?.entries || []).map(draft =>
+    '<option value="' + escape(draft.id) + '"' + (draft.id === selectedDraft?.id ? ' selected' : '') + '>' +
+    escape(draft.name) + '</option>'
+  ).join('');
+  const openDraft = '<form class="draft-select" method="get" action="/#staff"><label>Embeds salvos<select name="draft" required>' +
+    '<option value="">Selecione um rascunho</option>' + draftOptions +
+    '</select></label><button type="submit">Abrir</button><a href="/#staff">Novo embed</a></form>';
   const roleOptions = (choices?.roles || []).map(role =>
     '<option value="' + escape(role.id) + '" data-markup="' + escape('<@&' + role.id + '>') + '">@' + escape(role.name) + '</option>'
   ).join('');
@@ -109,6 +119,7 @@ ul{margin:0;padding:0;list-style:none}li{display:flex;justify-content:space-betw
 .editor-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editor-row button{margin-top:6px}.editor-row label{align-content:start}.check{display:flex;align-items:center;gap:8px}.check input{width:auto;min-height:auto}.preview img{width:1.25em;vertical-align:middle}.preview button{margin:10px 8px 0 0;padding:6px 9px;opacity:.75}.preview p:empty,.preview strong:empty{display:none}.preview[data-format=v2]{border:1px solid #58414b;border-left-width:3px;border-radius:8px}form{display:grid;gap:12px;margin-top:12px}label{display:grid;gap:5px;color:var(--muted);font-size:.9rem}input,textarea,select,button{font:inherit}input,textarea,select{width:100%;min-height:40px;background:#100e11;color:#fff;border:1px solid #58414b;border-radius:4px;padding:9px}input[type=color]{max-width:90px;padding:4px}textarea{resize:vertical}button{justify-self:start;border:0;border-radius:4px;padding:10px 15px;background:var(--accent);color:#1b1012;font-weight:800;cursor:pointer}button:hover{background:#ffab98}details{padding:12px;border-bottom:1px solid var(--line)}summary{cursor:pointer;font-weight:650}
 @media(max-width:760px){.grid,.staff-grid{grid-template-columns:1fr;gap:0}.staff-grid{gap:24px}.hero{padding-top:42px}nav{gap:12px}main,nav{padding-inline:16px}.stats div{padding:12px 9px}.stats small{font-size:.75rem}section{padding:16px}}@media(max-width:400px){.attendance{grid-template-columns:1fr}}
 .studio{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px}.studio>div,.studio>aside{min-width:0}.studio aside{position:sticky;top:16px;align-self:start;padding:16px;background:#100f12;border:1px solid var(--line);border-radius:5px}.studio aside h4{margin:0 0 8px}.studio .preview{background:#211f25;min-height:110px}.studio .preview[data-format=v2]{max-width:100%;padding:18px}.studio .preview[data-format=classic]{max-width:420px}.studio form details{border:1px solid var(--line);border-radius:5px}.studio form details[open]>*+*{margin-top:10px}.studio .editor-group{display:grid;gap:8px;padding:10px;background:#221a20;border-radius:4px}.studio .preview-banner{display:block;max-width:100%;border-radius:4px;margin-top:12px}.studio .preview-thumb{float:right;width:62px;height:62px;object-fit:cover;border-radius:4px;margin:0 0 8px 10px}.studio .preview strong{font-size:1.25rem}.studio .preview small{margin-top:6px}.studio .preview hr{border:0;border-top:1px solid #514852;margin:10px 0}.studio .preview h4{margin:10px 0 4px}.studio .preview h4+p{margin-top:0}.studio .preview img[hidden]{display:none}.command-list{border-top:1px solid var(--line);padding-top:16px}@media(max-width:760px){.studio{grid-template-columns:1fr}.studio aside{position:static}}
+.draft-select{display:flex;gap:10px;align-items:end;margin:0 0 16px;flex-wrap:wrap}.draft-select label{min-width:min(100%,270px)}.draft-select a{padding:10px}.draft-actions{display:flex;flex-wrap:wrap;gap:8px}.draft-actions button+button,.draft-select button{background:#39272e;color:#fff}
 </style>
 </head>
 <body><header><nav aria-label="Painel"><strong>EMBER VEIL</strong><a href="#treinos">Treinos</a><a href="#elenco">Elenco</a><a href="#historico">Histórico</a>${tools ? '<a href="#staff">Staff</a>' : ''}${signedIn ? '<a href="/sair">Sair</a>' : '<a href="/auth/discord">Entrar com Discord</a>'}</nav></header>
@@ -117,7 +128,10 @@ ul{margin:0;padding:0;list-style:none}li{display:flex;justify-content:space-betw
 <section id="elenco"><h2>Escalação</h2>${players ? '<ul>' + players + '</ul>' : empty('Nenhum jogador cadastrado. Use /elenco definir no Discord.')}</section></div>
 <section id="historico"><h2>Últimas partidas</h2>${results ? '<div class="scroll"><table><thead><tr><th>Adversário</th><th>Mapa</th><th>Placar</th><th>Resultado</th><th>Data</th></tr></thead><tbody>' + results + '</tbody></table></div>' : empty('Nenhuma partida registrada. Use /resultado no Discord.')}</section>
 ${tools ? `<section id="staff"><h2>Ferramentas da staff</h2>${notice ? '<p class="notice" role="status">' + notice + '</p>' : ''}
-<div class="studio"><div><h3>Criar mensagem</h3><form id="embed-form" method="post" action="/staff"><input type="hidden" name="action" value="embed">
+${openDraft}<div class="studio"><div><h3>${selectedDraft ? 'Editar mensagem' : 'Criar mensagem'}</h3>
+<form id="embed-form" method="post" action="/staff" data-draft="${escape(JSON.stringify(selectedDraft?.data || {}))}">
+<input type="hidden" name="draft_id" value="${escape(selectedDraft?.id || '')}"><input type="hidden" name="draft_revision" value="${escape(selectedDraft?.revision || '')}">
+<label>Nome do rascunho<input name="draft_name" maxlength="100" value="${escape(selectedDraft?.name || '')}" placeholder="Ex. Anúncio da próxima scrim"></label>
 <label>Título<input name="title" maxlength="256"></label><label>Descrição<textarea name="description" maxlength="4096" rows="5"></textarea></label>
 <div class="editor-row"><label>Formato<select name="format"><option value="v2" selected>Components V2 · Layout largo</option><option value="classic">Embed clássico</option></select></label><label>Cor <input name="color" type="color" value="#ff8069"></label></div>
 <div class="editor-row"><div><label>Cargo<select name="role"><option value="">Selecione</option>${roleOptions}</select></label><button type="button" data-insert="role">Inserir cargo</button></div>
@@ -128,13 +142,26 @@ ${tools ? `<section id="staff"><h2>Ferramentas da staff</h2>${notice ? '<p class
 <details><summary>Seções adicionais</summary>${extraFields}</details>
 <details><summary>Botões de link</summary>${buttons}</details>
 <label class="check"><input name="dividers" type="checkbox" checked> Divisórias entre blocos no V2</label>
-${channelField}<button id="send-format">Enviar Components V2</button></form></div>
+${channelField}<div class="draft-actions"><button id="send-format" name="action" value="embed">Enviar Components V2</button>
+<button name="action" value="draft/save" formnovalidate>Salvar rascunho</button>
+${selectedDraft ? '<button name="action" value="draft/copy" formnovalidate>Salvar cópia</button>' : ''}</div></form></div>
 <aside><h4>Prévia no Discord</h4><small id="preview-format">Components V2 · Layout largo</small>
 <div class="preview" id="embed-preview" data-format="v2" aria-label="Prévia da mensagem"><img class="preview-thumb" alt="Miniatura" hidden><small class="preview-author"></small><strong>Título da mensagem</strong><div class="preview-blocks"></div><img class="preview-banner" alt="Imagem da mensagem" hidden><small class="preview-footer"></small><div id="preview-buttons"></div></div></aside></div>
 ${premierPanel}<div class="command-list"><h3>Comandos do Discord</h3>${tools}</div></section>
 <script>
 const form = document.querySelector('#embed-form');
 const preview = document.querySelector('#embed-preview');
+const saved = JSON.parse(form.dataset.draft);
+if (form.elements.draft_id.value) {
+  form.elements.ping.checked = false;
+  form.elements.dividers.checked = false;
+}
+for (const [name, value] of Object.entries(saved)) {
+  const field = form.elements.namedItem(name);
+  if (!field) continue;
+  if (field.type === 'checkbox') field.checked = value === 'on';
+  else if (field.type !== 'select-one' || [...field.options].some(option => option.value === value)) field.value = value;
+}
 let insertTarget = form.elements.description;
 form.addEventListener('focusin', event => {
   if (event.target.tagName === 'TEXTAREA') insertTarget = event.target;

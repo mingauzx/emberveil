@@ -13,6 +13,9 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
   `);
   // Backfill the existing history through the same queue as new results.
   db.exec('INSERT OR IGNORE INTO result_announcements (score_id) SELECT id FROM scores');
+  // Requeue the explicitly requested Armageddon post once, keyed by its original message.
+  db.prepare('UPDATE result_announcements SET message_id = NULL WHERE message_id = ?')
+    .run('1575363481463685221');
   const pending = db.prepare(`SELECT scores.* FROM result_announcements
     JOIN scores ON scores.id = score_id WHERE message_id IS NULL ORDER BY scores.date LIMIT 20`);
   const delivered = db.prepare('UPDATE result_announcements SET message_id = ? WHERE score_id = ?');
@@ -29,7 +32,9 @@ export function resultAnnouncements(db, client, route, guildId, channelId, banne
       if (!channel?.isSendable()) throw Error('Canal de resultados indisponível.');
       for (const match of rows) {
         const kind = match.id.startsWith('premier:') ? 'Resultado Premier' : 'Resultado da partida';
-        const nonce = createHash('sha256').update(match.id).digest('hex').slice(0, 24);
+        const nonce = createHash('sha256').update(match.id + (match.opponent === 'Armageddon' && match.map === 'Abyss' &&
+          match.ours === 13 && match.theirs === 7 && Math.floor(match.date / 60000) ===
+          Math.floor(Date.parse('2026-11-26T04:02:00Z') / 60000) ? ':resend' : '')).digest('hex').slice(0, 24);
         const message = await client.rest.post(route(channel.id), { body: {
           nonce, enforce_nonce: true, allowed_mentions: { parse: [] },
           embeds: [{
